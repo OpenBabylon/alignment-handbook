@@ -35,9 +35,7 @@ from alignment import (
     decontaminate_humaneval,
     get_checkpoint,
     get_datasets,
-    get_kbit_device_map,
     get_peft_config,
-    get_quantization_config,
     get_tokenizer,
 )
 from trl import SFTTrainer, setup_chat_format
@@ -108,7 +106,6 @@ def main():
     torch_dtype = (
         model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
     )
-    quantization_config = get_quantization_config(model_args)
 
     model_kwargs = dict(
         revision=model_args.model_revision,
@@ -116,8 +113,7 @@ def main():
         attn_implementation=model_args.attn_implementation,
         torch_dtype=torch_dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
-        device_map=get_kbit_device_map() if quantization_config is not None else None,
-        quantization_config=quantization_config,
+        device_map=None
     )
 
     model = model_args.model_name_or_path
