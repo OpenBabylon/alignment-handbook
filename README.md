@@ -1,3 +1,6 @@
+### This is a FORK aimed an optimizing installion for specific usecases and hardware. Will miss bits and pieces and fall behind original repo. Use the [original repo](https://github.com/huggingface/alignment-handbook) instead
+
+=================
 <p align="center">
   <img src="https://raw.githubusercontent.com/huggingface/alignment-handbook/main/assets/handbook.png">
 </p>
