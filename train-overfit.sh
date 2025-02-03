@@ -1,0 +1,2 @@
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/multi_gpu.yaml scripts/run_ua_finetune.py recipes/openbabylon/gemma-tok20k-overfit-ua.yaml 
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/multi_gpu.yaml scripts/run_ua_finetune.py recipes/openbabylon/gemma-vanilla-overfit-ua.yaml
