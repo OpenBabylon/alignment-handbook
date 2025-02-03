@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Supervised fine-tuning script for decoder language models.
+Continued pretraining script for decoder language models.
 """
 
 import logging
@@ -24,23 +24,19 @@ import sys
 import datasets
 import torch
 import transformers
-from transformers import AutoModelForCausalLM, set_seed
+from transformers import set_seed
 
 from alignment import (
     DataArguments,
     H4ArgumentParser,
     ModelArguments,
     SFTConfig,
-    apply_chat_template,
-    decontaminate_humaneval,
     get_checkpoint,
     get_datasets,
-    get_kbit_device_map,
     get_peft_config,
-    get_quantization_config,
     get_tokenizer,
 )
-from trl import SFTTrainer, setup_chat_format
+from trl import SFTTrainer
 
 
 logger = logging.getLogger(__name__)
@@ -85,22 +81,49 @@ def main():
     ###############
     # Load datasets
     ###############
-    raw_datasets = get_datasets(
-        data_args,
-        splits=data_args.dataset_splits,
-        configs=data_args.dataset_configs,
-        columns_to_keep=["messages", "chosen", "rejected", "prompt", "completion", "label", "conversations"],
-    )
+    import pandas as pd
+    # data_files = {"train": "train.jsonl", "test": "validation.jsonl"}
+    # raw_datasets = datasets.load_dataset("PolyAgent/ukrainian-en-wiki", data_files=data_files)
+    questions = datasets.load_dataset("antonpolishko/mmlu-ua-aux-train")
+    num2char = {0:"A", 1:"B", 2:"C", 3:"D"}
+    prompts = []
+    for row in questions['train']:
+        prompts.append(f"{row['question']}\nВідповідь: {row['answer']}")
+    df = pd.DataFrame(prompts)
+    raw_datasets = datasets.Dataset.from_pandas(df.rename(columns={0:"text"}), split="train").train_test_split(test_size=0.03)
+
+
+    # raw_datasets = get_datasets(
+    #     data_args,
+    #     splits=data_args.dataset_splits,
+    #     configs=data_args.dataset_configs,
+    #     columns_to_keep=[data_args.text_column],
+    # )
+
     logger.info(
-        f"Training on the following datasets and their proportions: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
+        f"Training on the following datasets and their proportions:"
+        f" {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
     )
-    # column_names = list(raw_datasets["train"].features)
-    # if "conversations" in column_names:
-    #     raw_datasets = raw_datasets.rename_column("conversations", "messages")
+
+    train_dataset = raw_datasets["train"] if "train" in raw_datasets else None
+    eval_dataset = raw_datasets["test"] if "test" in raw_datasets else None
+
+    if train_dataset is None:
+        raise ValueError(
+            "Training set must be included (so make sure that your dataset has a split with" " 'train' in the name)."
+        )
+
+    if training_args.do_eval and eval_dataset is None:
+        raise ValueError("'--do_eval' enabled so make sure that your dataset has a split with 'test' in the name.")
+
     ################
     # Load tokenizer
     ################
-    tokenizer = get_tokenizer(model_args, data_args)
+    tokenizer = get_tokenizer(model_args, data_args, auto_set_chat_template=False)
+
+    with training_args.main_process_first(desc="Log a few random samples from the processed training set"):
+        for index in random.sample(range(len(raw_datasets["train"])), 3):
+            logger.info(f"Sample {index} of the processed training set:\n\n{raw_datasets['train'][index]['text']}")
 
     #######################
     # Load pretrained model
@@ -109,7 +132,6 @@ def main():
     torch_dtype = (
         model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
     )
-    quantization_config = get_quantization_config(model_args)
 
     model_kwargs = dict(
         revision=model_args.model_revision,
@@ -117,77 +139,24 @@ def main():
         attn_implementation=model_args.attn_implementation,
         torch_dtype=torch_dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
-        device_map=get_kbit_device_map() if quantization_config is not None else None,
-        quantization_config=quantization_config,
+        device_map=None,
     )
-
-    model = model_args.model_name_or_path
-    # For ChatML we need to add special tokens and resize the embedding layer
-    if "<|im_start|>" in tokenizer.chat_template and "gemma-tokenizer-chatml" not in tokenizer.name_or_path:
-        model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path, **model_kwargs)
-        model, tokenizer = setup_chat_format(model, tokenizer)
-        model_kwargs = None
-
-    #####################
-    # Apply chat template
-    #####################
-    def convert_conversations_to_messages(example):
-        """Convert dataset format: rename 'from' → 'role' and 'value' → 'content'."""
-        return {
-            "messages": [
-                {"role": "user" if msg["from"] == "human" else "assistant", "content": msg["value"]}
-                for msg in example["conversations"]
-            ]
-        }
-
-    # Apply transformation
-    raw_datasets = raw_datasets.map(convert_conversations_to_messages, num_proc=4)
-    column_names = list(raw_datasets["train"].features)
-
-
-    raw_datasets = raw_datasets.map(
-        apply_chat_template,
-        fn_kwargs={
-            "tokenizer": tokenizer,
-            "task": "sft",
-            "auto_insert_empty_system_msg": data_args.auto_insert_empty_system_msg,
-        },
-        num_proc=data_args.preprocessing_num_workers,
-        remove_columns=column_names,
-        desc="Applying chat template",
-    )
-
-    ##########################
-    # Decontaminate benchmarks
-    ##########################
-    num_raw_train_samples = len(raw_datasets["train"])
-    raw_datasets = raw_datasets.filter(decontaminate_humaneval, batched=True, batch_size=10_000, num_proc=1)
-    num_filtered_train_samples = num_raw_train_samples - len(raw_datasets["train"])
-    logger.info(
-        f"Decontaminated {num_filtered_train_samples} ({num_filtered_train_samples/num_raw_train_samples * 100:.2f}%) samples from the training set."
-    )
-
-    train_dataset = raw_datasets["train"]
-    eval_dataset = raw_datasets["test"]
-
-    with training_args.main_process_first(desc="Log a few random samples from the processed training set"):
-        for index in random.sample(range(len(raw_datasets["train"])), 3):
-            logger.info(f"Sample {index} of the processed training set:\n\n{raw_datasets['train'][index]['text']}")
-
-    training_args.model_init_kwargs = model_kwargs
-    training_args.dataset_text_field = "text"  # ✅ Ensuring dataset text field is inside SFTConfig
-
 
     ########################
     # Initialize the Trainer
     ########################
     trainer = SFTTrainer(
-        model=model,
+        model=model_args.model_name_or_path,
+        model_init_kwargs=model_kwargs,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
+        dataset_text_field=data_args.text_column,
+        max_seq_length=training_args.max_seq_length,
         tokenizer=tokenizer,
+        packing=True,
         peft_config=get_peft_config(model_args),
+        dataset_kwargs=training_args.dataset_kwargs,
     )
 
     ###############
@@ -199,6 +168,7 @@ def main():
         checkpoint = training_args.resume_from_checkpoint
     elif last_checkpoint is not None:
         checkpoint = last_checkpoint
+
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
     metrics = train_result.metrics
     metrics["train_samples"] = len(train_dataset)
@@ -218,16 +188,8 @@ def main():
         "finetuned_from": model_args.model_name_or_path,
         "dataset": list(data_args.dataset_mixer.keys()),
         "dataset_tags": list(data_args.dataset_mixer.keys()),
-        "tags": ["alignment-handbook"],
+        "tags": ["h200"],
     }
-
-    kwargs = {
-        "model_name": model_args.model_name_or_path,  # Change to your actual model name
-        "dataset_name": list(data_args.dataset_mixer.keys()),  # Change to your dataset name
-        "tags": ["sft"],  # Adjust tags as needed
-    }
-
-
     if trainer.accelerator.is_main_process:
         trainer.create_model_card(**kwargs)
         # Restore k,v cache for fast inference

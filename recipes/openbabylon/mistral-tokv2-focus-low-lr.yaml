@@ -1,0 +1,49 @@
+# Model arguments
+model_name_or_path: PolyAgent/mistral-7b-v0.3-custom-tokenizer-focus-init-base-v2
+tokenizer_name_or_path: PolyAgent/mistral-7b-v0.3-custom-tokenizer-focus-init-base-v2
+torch_dtype: bfloat16
+
+# Data training arguments
+dataset_mixer:
+  PolyAgent/wiki_uk_en_parallel: 1.0
+dataset_splits:
+  - train
+  - test
+text_column: text
+# dataset_configs:
+#   - tiny
+preprocessing_num_workers: 90
+
+# SFT trainer config
+bf16: true
+do_eval: true
+eval_strategy: steps
+eval_steps: 500
+# gradient_accumulation_steps: 4
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: False
+hub_model_id: amd-mistral-v0.3-focus-v2-low-lr
+hub_strategy: checkpoint
+learning_rate: 0.2e-05
+log_level: info
+logging_steps: 5
+logging_strategy: steps
+lr_scheduler_type: cosine
+max_seq_length: 2048
+max_steps: -1 #38926 # set this manually by figuring out the actual step counter in order to use streaming datasets
+num_train_epochs: 1
+output_dir: /home/openbabylon/ckpts/mistral-7b-tokv2-focus-low-lr
+overwrite_output_dir: true
+per_device_eval_batch_size: 4
+per_device_train_batch_size: 4
+push_to_hub: true
+remove_unused_columns: true
+report_to:
+  - wandb
+  - tensorboard
+save_strategy: "steps"
+save_steps: 5000
+# save_total_limit: 5
+seed: 42
+warmup_ratio: 0.1
