@@ -141,41 +141,42 @@ def main():
         }
 
     # Apply transformation
-    raw_datasets = raw_datasets.map(convert_conversations_to_messages, num_proc=4)
+    # raw_datasets = raw_datasets.map(convert_conversations_to_messages, num_proc=4)
     column_names = list(raw_datasets["train"].features)
 
 
-    raw_datasets = raw_datasets.map(
-        apply_chat_template,
-        fn_kwargs={
-            "tokenizer": tokenizer,
-            "task": "sft",
-            "auto_insert_empty_system_msg": data_args.auto_insert_empty_system_msg,
-        },
-        num_proc=data_args.preprocessing_num_workers,
-        remove_columns=column_names,
-        desc="Applying chat template",
-    )
+    # raw_datasets = raw_datasets.map(
+    #     apply_chat_template,
+    #     fn_kwargs={
+    #         "tokenizer": tokenizer,
+    #         "task": "sft",
+    #         "auto_insert_empty_system_msg": data_args.auto_insert_empty_system_msg,
+    #     },
+    #     num_proc=data_args.preprocessing_num_workers,
+    #     remove_columns=column_names,
+    #     desc="Applying chat template",
+    # )
 
     ##########################
     # Decontaminate benchmarks
     ##########################
-    num_raw_train_samples = len(raw_datasets["train"])
-    raw_datasets = raw_datasets.filter(decontaminate_humaneval, batched=True, batch_size=10_000, num_proc=1)
-    num_filtered_train_samples = num_raw_train_samples - len(raw_datasets["train"])
-    logger.info(
-        f"Decontaminated {num_filtered_train_samples} ({num_filtered_train_samples/num_raw_train_samples * 100:.2f}%) samples from the training set."
-    )
+    # num_raw_train_samples = len(raw_datasets["train"])
+    # raw_datasets = raw_datasets.filter(decontaminate_humaneval, batched=True, batch_size=10_000, num_proc=1)
+    # num_filtered_train_samples = num_raw_train_samples - len(raw_datasets["train"])
+    # logger.info(
+    #     f"Decontaminated {num_filtered_train_samples} ({num_filtered_train_samples/num_raw_train_samples * 100:.2f}%) samples from the training set."
+    # )
 
     train_dataset = raw_datasets["train"]
-    eval_dataset = raw_datasets["test"]
+    # eval_dataset = raw_datasets["test"]
 
-    with training_args.main_process_first(desc="Log a few random samples from the processed training set"):
-        for index in random.sample(range(len(raw_datasets["train"])), 3):
-            logger.info(f"Sample {index} of the processed training set:\n\n{raw_datasets['train'][index]['text']}")
+    # with training_args.main_process_first(desc="Log a few random samples from the processed training set"):
+    #     for index in random.sample(range(len(raw_datasets["train"])), 3):
+    #         logger.info(f"Sample {index} of the processed training set:\n\n{raw_datasets['train'][index]['text']}")
 
     training_args.model_init_kwargs = model_kwargs
-    training_args.dataset_text_field = "text"  # ✅ Ensuring dataset text field is inside SFTConfig
+    training_args.eval_strategy = "no"
+    # training_args.dataset_text_field = "text"  # ✅ Ensuring dataset text field is inside SFTConfig
 
 
     ########################
@@ -185,7 +186,7 @@ def main():
         model=model,
         args=training_args,
         train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
+        # eval_dataset=eval_dataset,
         tokenizer=tokenizer,
         peft_config=get_peft_config(model_args),
     )
@@ -237,12 +238,12 @@ def main():
     ##########
     # Evaluate
     ##########
-    if training_args.do_eval:
-        logger.info("*** Evaluate ***")
-        metrics = trainer.evaluate()
-        metrics["eval_samples"] = len(eval_dataset)
-        trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", metrics)
+    # if training_args.do_eval:
+    #     logger.info("*** Evaluate ***")
+    #     metrics = trainer.evaluate()
+    #     # metrics["eval_samples"] = len(eval_dataset)
+    #     trainer.log_metrics("eval", metrics)
+    #     trainer.save_metrics("eval", metrics)
 
     if training_args.push_to_hub is True:
         logger.info("Pushing to hub...")
