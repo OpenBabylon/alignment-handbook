@@ -120,3 +120,4 @@ xxhash==3.5.0
 yacs==0.1.8
 yarl==1.18.0
 zipp==3.19.2
+lmeval@git+https://github.com/PolyAgent/lm-evaluation-harness

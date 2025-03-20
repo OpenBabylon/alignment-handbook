@@ -114,6 +114,7 @@ install_requires = [
     deps["tqdm"],  # progress bars in model download and training scripts
     deps["transformers"],
     deps["trl"],
+    "lm-eval @ git+https://github.com/PolyAgent/lm-evaluation-harness"
 ]
 
 setup(

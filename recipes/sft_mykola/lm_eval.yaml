@@ -1,0 +1,12 @@
+base_model_path: "meta-llama/Meta-Llama-3-8B-Instruct"
+# base_model_path: "meta-llama/Llama-3.2-1B-Instruct"
+
+checkpoints_dir: "/data/syvokon-8b_slow"
+save_dir: "eval_results"
+tasks:
+  - "zno-language"
+  - "zno-history"
+  - "zno-literature"
+
+limit: -1
+chat_template: 0

@@ -31,6 +31,7 @@ from alignment import (
     H4ArgumentParser,
     ModelArguments,
     SFTConfig,
+    EvalArguments,
     apply_chat_template,
     decontaminate_humaneval,
     get_checkpoint,
@@ -47,8 +48,9 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    parser = H4ArgumentParser((ModelArguments, DataArguments, SFTConfig))
-    model_args, data_args, training_args = parser.parse()
+    parser = H4ArgumentParser((ModelArguments, DataArguments, SFTConfig, EvalArguments))
+    model_args, data_args, training_args, eval_args = parser.parse()
+
 
     # Set seed for reproducibility
     set_seed(training_args.seed)

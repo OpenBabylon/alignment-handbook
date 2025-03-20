@@ -1,0 +1,39 @@
+# ---------------------------------------------------
+# Model arguments
+# ---------------------------------------------------
+model_name_or_path: meta-llama/Llama-3.1-8B  # Adjust model if needed
+torch_dtype: bfloat16  # FP16/bf16 should work on 3080
+attn_implementation: flash_attention_2  # Optimized attention
+
+# ---------------------------------------------------
+# Quantization (Enable if needed)
+# ---------------------------------------------------
+quantization_config:
+  load_in_8bit: true  # Change to `load_in_4bit: true` for even better memory efficiency
+
+# ---------------------------------------------------
+# Data training arguments
+# ---------------------------------------------------
+dataset_mixer:
+  my_mcq_dataset: 1.0  # Ensure your dataset is formatted properly
+dataset_splits:
+  - train
+text_column: text
+preprocessing_num_workers: 4  # Keep low for local runs
+
+# ---------------------------------------------------
+# Training setup (Memory efficient)
+# ---------------------------------------------------
+bf16: true  # 3080 supports bf16, but you can switch to fp16 if needed
+do_eval: false  # Disable eval for now (to save VRAM)
+gradient_accumulation_steps: 8  # Allows simulating bigger batch sizes
+learning_rate: 5e-5  # Can be adjusted
+max_seq_length: 512  # Reduce if memory issues
+num_train_epochs: 10  # Increase epochs since dataset is small
+per_device_train_batch_size: 1  # Safe default, adjust as needed
+logging_steps: 5
+output_dir: /tmp/overfit-mcq  # Local directory for saving model
+push_to_hub: false
+save_strategy: "steps"
+save_steps: 500
+seed: 42

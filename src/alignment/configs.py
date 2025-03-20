@@ -159,6 +159,10 @@ class ModelArguments:
         default=False,
         metadata={"help": ("Whether to use PEFT or not for training.")},
     )
+    use_rslora: bool = field(
+        default=False,
+        metadata={"help": ("Whether to use use_rslora or not for training.")},
+    )    
     lora_r: Optional[int] = field(
         default=16,
         metadata={"help": ("LoRA R value.")},
@@ -195,8 +199,13 @@ class ModelArguments:
         if self.load_in_8bit and self.load_in_4bit:
             raise ValueError("You can't use 8 bit and 4 bit precision at the same time")
 
-
 @dataclass
+class EvalArguments:
+    eval_save_dir: str = "eval_results"
+    limit: int = -1
+    lm_eval_tasks: List[str] = field(default_factory=lambda: ["zno-language"])
+
+@dataclass  
 class DataArguments:
     """
     Arguments pertaining to what data we are going to input our model for training and eval.
