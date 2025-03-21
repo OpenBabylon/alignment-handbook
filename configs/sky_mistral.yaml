@@ -1,0 +1,38 @@
+name: a100_one
+
+resources:
+  accelerators: A100:1 # 2, 4, 8
+  # ports: 8080-8100
+  cloud: gcp
+  use_spot: False
+  # zone: us-central1-a
+  region: us-central1
+  disk_size: 200
+  # image_id: projects/deeplearning-platform-release/global/images/pytorch-2-1-cu121-v20240708-ubuntu-2204-py310
+  # image_id: projects/deeplearning-platform-release/global/images/pytorch-2-4-cu124-v20250205-ubuntu-2204-py310
+
+workdir: .
+
+file_mounts:
+  /data:
+    source: ${BUCKET}
+    mode: MOUNT
+
+setup: |
+  echo $HF_TOKEN
+  pip install .
+  pip install flash-attn --no-build-isolation
+  echo "installation DONE"
+  wandb login --relogin $WANDB_API_KEY
+  huggingface-cli login --token $HF_TOKEN
+  echo "SETUP DONE"
+
+run: |
+  ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/deepspeed_zero3.yaml scripts/run_sft.py recipes/sft_mykola/sky_mistral_unlp.yaml
+  echo "RUN DONE"
+
+envs:
+  HF_TOKEN: ${oc.env:HF_TOKEN}
+  HF_HOME: "/home/gcpuser/ramdisk/.cache/huggingface"
+  BUCKET: gs://gpu-research-cloud-1
+  WANDB_API_KEY:  ${oc.env:WANDB_API_KEY}
