@@ -1,0 +1,39 @@
+# Model arguments
+model_name_or_path: INSAIT-Institute/MamayLM-Gemma-2-9B-IT-v0.1
+#model_revision: main
+torch_dtype: bfloat16
+#attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_mixer:
+  OpenBabylon/ORPO_UA_langUA: 1.0
+  OpenBabylon/ORPO_UA_langEN: 1.0
+dataset_splits:
+  - train
+preprocessing_num_workers: 8
+
+# ORPOTrainer arguments
+bf16: true
+beta: 0.05
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: true
+hub_model_id: OpenBabylon/MamayLM-ORPO-align
+learning_rate: 5.0e-6
+log_level: info
+logging_steps: 10
+lr_scheduler_type: inverse_sqrt
+max_length: 2048
+max_prompt_length: 1792
+num_train_epochs: 3
+optim: adamw_bnb_8bit
+output_dir: data/MamayLM-ORPO-align
+per_device_train_batch_size: 1
+push_to_hub: true
+report_to:
+    - wandb
+    - tensorboard
+save_strategy: "epoch"
+seed: 42
+warmup_steps: 100

@@ -64,11 +64,12 @@ _deps = [
     "sentencepiece>=0.1.99",
     "scipy",
     "tensorboard",
-    "torch>=2.1.2",
+    "torch==2.6",
     "transformers>=4.39.3",
     "trl>=0.9.6",
     "jinja2>=3.0.0",
     "tqdm>=4.64.1",
+    "ruamel.yaml"
 ]
 
 # this is a lookup table with items like:

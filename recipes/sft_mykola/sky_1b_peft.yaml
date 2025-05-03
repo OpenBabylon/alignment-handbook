@@ -1,0 +1,44 @@
+# Model arguments
+# model_name_or_path: meta-llama/Llama-3.2-1B-Instruct
+model_name_or_path: meta-llama/Meta-Llama-3-8B-Instruct
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_mixer:
+  ingvar/zno_instruction_mcq_dataset: 1.0
+  # ingvar/zno_syvokon: 1.0
+dataset_splits:
+  - train
+  - test
+preprocessing_num_workers: 4
+
+# Training setup
+bf16: true
+do_eval: true
+gradient_accumulation_steps: 2
+learning_rate: 2.0e-03
+max_seq_length: 1024
+num_train_epochs: 10
+per_device_train_batch_size: 5
+logging_steps: 5
+output_dir: /data/history_lora_2e3_r8
+push_to_hub: false
+save_strategy: epoch
+seed: 42
+
+# PEFT / LoRA parameters
+use_peft: true          # Enable LoRA in the script
+lora_r: 8             # "r" in LoRA
+lora_alpha: 16         # alpha scaling
+lora_dropout: 0.05      # dropout for LoRA
+use_rslora: true   # i.e. use_rslora = True
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - down_proj
+  - up_proj
+  - lm_head

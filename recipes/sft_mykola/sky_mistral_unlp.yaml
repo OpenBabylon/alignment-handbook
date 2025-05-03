@@ -1,0 +1,36 @@
+# Model arguments
+model_name_or_path: mistralai/Mistral-7B-Instruct-v0.3
+# model_name_or_path: meta-llama/Meta-Llama-3-8B-Instruct
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_mixer:
+  # ingvar/zno_instruction_mcq_dataset: 1.0
+  OpenBabylon/unlp2025_binary_tech_pred_ua: 1.0
+  OpenBabylon/unlp2025_binary_tech_pred_en: 1.0
+dataset_splits:
+  - train
+  - test
+preprocessing_num_workers: 4
+
+# Training setup
+bf16: true
+do_eval: true
+gradient_accumulation_steps: 4
+learning_rate: 5.0e-06
+max_seq_length: 1024
+num_train_epochs: 10
+per_device_train_batch_size: 2
+logging_steps: 5
+output_dir: /data/mistral_binary
+push_to_hub: false
+save_strategy: epoch
+seed: 42
+
+eval_save_dir: "eval_results"
+lm_eval_tasks:
+  - "zno-history"
+  - "zno-literature"
+limit: -1 
+
