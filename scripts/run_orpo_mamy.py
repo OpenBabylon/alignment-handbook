@@ -18,7 +18,7 @@ import logging
 import random
 import sys
 from typing import Any, Dict
-
+import wandb
 import torch
 import transformers
 from transformers import AutoModelForCausalLM, set_seed
@@ -45,6 +45,20 @@ logger = logging.getLogger(__name__)
 def main():
     parser = H4ArgumentParser((ModelArguments, DataArguments, ORPOConfig))
     model_args, data_args, training_args = parser.parse()
+
+    if "wandb" in training_args.report_to:
+        wandb.init(
+            project="MamayLM-ORPO",
+            name=training_args.wandb_run_name if hasattr(training_args, "wandb_run_name") else None,
+            config={
+                "model_args": vars(model_args),
+                "data_args": vars(data_args),
+                "training_args": vars(training_args),
+            },
+            tags=["orpo", "mamaylm", training_args.output_dir],
+            resume="allow"
+        )
+
 
     #######
     # Setup
@@ -112,6 +126,10 @@ def main():
         device_map=get_kbit_device_map() if quantization_config is not None else None,
         quantization_config=quantization_config,
     )
+
+    if "wandb" in training_args.report_to:
+        wandb.watch(model, log="all", log_freq=250)
+
 
     # For ChatML we need to add special tokens and resize the embedding layer
     if "<|im_start|>" in tokenizer.chat_template:
@@ -213,6 +231,7 @@ def main():
     ###############
     # Training loop
     ###############
+
     checkpoint = None
     if training_args.resume_from_checkpoint is not None:
         checkpoint = training_args.resume_from_checkpoint
@@ -224,7 +243,8 @@ def main():
     trainer.log_metrics("train", metrics)
     trainer.save_metrics("train", metrics)
     trainer.save_state()
-
+    if "wandb" in training_args.report_to and trainer.accelerator.is_main_process:
+        wandb.log(metrics, step=trainer.state.global_step)
     logger.info("*** Training complete ***")
 
     ##################################
@@ -258,6 +278,8 @@ def main():
         metrics["eval_samples"] = len(raw_datasets["test"])
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+        if "wandb" in training_args.report_to and trainer.accelerator.is_main_process:
+            wandb.log(metrics)
 
     if training_args.push_to_hub is True:
         logger.info("Pushing to hub...")

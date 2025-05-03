@@ -69,7 +69,8 @@ _deps = [
     "trl>=0.9.6",
     "jinja2>=3.0.0",
     "tqdm>=4.64.1",
-    "ruamel.yaml"
+    "ruamel.yaml",
+    "wandb"
 ]
 
 # this is a lookup table with items like:
