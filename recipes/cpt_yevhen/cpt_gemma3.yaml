@@ -1,0 +1,45 @@
+# Model arguments
+model_name_or_path: google/gemma-3-1b-pt
+model_revision: main
+torch_dtype: bfloat16
+
+# Data training arguments
+dataset_mixer:
+  Zarakun/ukrainian_news: 1.0
+  d0p3/ukr-pravda-news-summary-v1.1: 1.0
+dataset_splits:
+  - train
+preprocessing_num_workers: 12
+
+
+# SFT trainer config
+bf16: true
+do_eval: False
+eval_strategy: "no"
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: False
+hub_model_id: OpenBabylon/gemma3-cpt-y-unusable
+hub_strategy: every_save
+learning_rate: 2.0e-04
+log_level: info
+logging_steps: 5  
+logging_strategy: steps
+lr_scheduler_type: cosine
+max_seq_length: 1024
+max_steps: -1
+num_train_epochs: 1
+output_dir: data/gemma3-cpt-y-unusable
+overwrite_output_dir: true
+per_device_eval_batch_size: 8
+per_device_train_batch_size: 8
+push_to_hub: true
+remove_unused_columns: true
+report_to:
+- wandb
+save_strategy: "steps"
+save_steps: 100
+save_total_limit: 1
+seed: 42
+warmup_ratio: 0.1

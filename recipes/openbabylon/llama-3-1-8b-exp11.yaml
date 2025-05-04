@@ -1,0 +1,55 @@
+# Model arguments
+model_name_or_path: meta-llama/Llama-3.1-8B
+# model_revision: 9b8b38da033cef0771026a3c08fc2f609676f071 # ~1epoch
+# tokenizer_name_or_path: antonpolishko/ua-mistral-0.3-ua-ckpt-h100-lower-lr-no-grad-accumulation
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_mixer:
+    PolyAgent/ubertext_full: 1.0
+    PolyAgent/wiki_uk_en_parallel: 1.0
+    PolyAgent/fineweb-edu-5B: 1.0
+    PolyAgent/textbooks: 1.0
+dataset_splits:
+    - train
+    - test
+text_column: text
+# dataset_configs:
+#   - tiny
+preprocessing_num_workers: 256
+
+# SFT trainer config
+bf16: true
+do_eval: true
+eval_strategy: steps
+eval_steps: 500
+gradient_accumulation_steps: 4
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+    use_reentrant: False
+hub_model_id: amd-llama3_1-8b-exp11
+hub_private_repo: true
+hub_strategy: checkpoint
+learning_rate: 5.0e-06
+log_level: info
+logging_steps: 5
+logging_strategy: steps
+lr_scheduler_type: cosine
+max_seq_length: 2048
+max_steps: -1 # 132135 5.53s/it
+num_train_epochs: 3
+output_dir: /home/openbabylon/ckpts/amd-llama3_1-8b-exp11
+overwrite_output_dir: true
+per_device_eval_batch_size: 4
+per_device_train_batch_size: 4
+push_to_hub: true
+remove_unused_columns: true
+report_to:
+    - wandb
+    - tensorboard
+save_strategy: "steps"
+save_steps: 5000
+save_total_limit: 5
+seed: 42
+warmup_ratio: 0.1

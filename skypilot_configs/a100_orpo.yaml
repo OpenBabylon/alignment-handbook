@@ -1,0 +1,32 @@
+name: a100_one
+
+resources:
+  accelerators: A100:1 # 2, 4, 8
+  ports: 8080-8100
+  cloud: gcp
+  use_spot: True
+  region: us-central1
+  disk_size: 500
+
+workdir: .
+
+file_mounts:
+  /data:
+    source: ${BUCKET}
+    mode: MOUNT
+    
+setup: |
+  echo $HF_TOKEN
+  pip install .
+  pip install -r flash_requirements.txt
+  echo ">> Starting installing flash-attn"
+  MAX_JOBS=4 pip install flash-attn --no-build-isolation
+  echo ">> Finished installing flash-attn"
+  pip install wandb
+  wandb login --relogin $WANDB_API_KEY
+  huggingface-cli login --token $HF_TOKEN
+  echo "SETUP DONE"
+
+run: |
+  ACCELERATE_LOG_LEVEL=info  accelerate launch --config_file accelerate_configs/single_gpu.yaml scripts/run_orpo_mamy.py recipes/cpt_yevhen/orpo_mamah.yaml
+  echo "RUN DONE"
