@@ -22,6 +22,7 @@ import wandb
 import torch
 import transformers
 from transformers import AutoModelForCausalLM, set_seed
+import os 
 
 from alignment import (
     DataArguments,
@@ -45,7 +46,8 @@ logger = logging.getLogger(__name__)
 def main():
     parser = H4ArgumentParser((ModelArguments, DataArguments, ORPOConfig))
     model_args, data_args, training_args = parser.parse()
-
+    if isinstance(training_args.learning_rate, str):
+        training_args.learning_rate = float(training_args.learning_rate)
     if "wandb" in training_args.report_to:
         wandb.init(
             project="MamayLM-ORPO",
@@ -53,12 +55,15 @@ def main():
             config={
                 "model_args": vars(model_args),
                 "data_args": vars(data_args),
-                "training_args": vars(training_args),
+                # Avoid passing HfDeepSpeedConfig or anything unserializable
+                "training_args": {
+                    k: v for k, v in vars(training_args).items()
+                    if not isinstance(v, (dict, list, tuple)) and "deepspeed" not in k
+                },
             },
             tags=["orpo", "mamaylm", training_args.output_dir],
-            resume="allow"
+            resume="allow",
         )
-
 
     #######
     # Setup
@@ -224,7 +229,7 @@ def main():
         args=training_args,
         train_dataset=raw_datasets["train"],
         eval_dataset=raw_datasets["test"] if "test" in raw_datasets else None,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         peft_config=get_peft_config(model_args),  # type: ignore
     )
 

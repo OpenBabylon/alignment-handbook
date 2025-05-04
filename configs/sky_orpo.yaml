@@ -1,7 +1,7 @@
 name: a100_one
 
 resources:
-  accelerators: A100-80GB:8 # 2, 4, 8
+  accelerators: H100:8 # 2, 4, 8
   # ports: 8080-8100
   cloud: gcp
   use_spot: True
@@ -21,6 +21,7 @@ file_mounts:
 setup: |
   echo $HF_TOKEN
   pip install .
+  pip install torch==2.6
   pip install flash-attn --no-build-isolation
   echo "installation DONE"
   wandb login --relogin $WANDB_API_KEY
