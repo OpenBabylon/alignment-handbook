@@ -24,3 +24,4 @@ trl
 tensorboard
 bitsandbytes
 accelerate
+nltk==3.8.1
